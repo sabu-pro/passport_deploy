@@ -1,9 +1,9 @@
-flask
-pillow
+Flask
+gunicorn
+Pillow
 python-dotenv
 requests
 cloudinary
-opencv-python
+opencv-python-headless
 numpy
-rembg
-gunicorn
+rembg[cpu]
