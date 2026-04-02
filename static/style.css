@@ -1,0 +1,252 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {    background: linear-gradient(135deg, #e8f1f8, #f8fbff);
+    min-height: 100vh;
+    padding: 25px 15px;
+    color: #1f2937;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 28px;
+    box-shadow: 0 15px 40px rgba(18, 50, 80, 0.12);
+    border: 1px solid #e6ecf4;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 0.3rem;
+    font-size: 2.3rem;
+    letter-spacing: 0.02em;
+    color: #0f172a;
+}
+
+.hero {
+    text-align: center;
+    padding-bottom: 14px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.subtitle {
+    color: #334155;
+    margin-top: 10px;
+    font-size: 1.04rem;
+    line-height: 1.5;
+}
+
+.steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.steps div {
+    background: #f1f5f9;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.steps span {
+    background: #2563eb;
+    color: #fff;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.85rem;
+}
+
+    .footer-text {
+        margin-top: 20px;
+        text-align: center;
+        color: #6b7280;
+        font-size: 0.92rem;
+        letter-spacing: 0.02em;
+    }
+}
+
+.info-box, .warn-box {
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+}
+
+.hero {
+    text-align: center;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.info-box {
+    margin-top: 16px;
+    margin-bottom: 26px;
+    font-style: normal;
+}
+
+.steps {
+    margin-top: 8px;
+    margin-bottom: 24px;
+}
+.info-box {
+    background: #f3f8ff;
+    border: 1px solid #c8ddf5;
+    color: #1e3a5d;
+}
+
+.warn-box {
+    background: #fff7ec;
+    border: 1px solid #f2d5a6;
+    color: #7e521b;
+}
+
+.info-box {
+    background: #eef8ff;
+    border: 1px solid #cfe7ff;
+}
+
+.warn-box {
+    background: #fff4d6;
+    border: 1px solid #f0d793;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+input[type="file"],
+input[type="number"],
+input[type="color"],
+select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 15px;
+    background: #f6f6f4;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.checkbox-row label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-row input[type="checkbox"] {
+    width: auto;
+}
+
+.preview-box {
+    margin: 20px 0;
+    text-align: center;
+    padding: 20px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 14px;
+    background: #f8fafc;
+}
+
+.preview-box p {
+    margin-bottom: 12px;
+    color: #475569;
+    font-weight: 600;
+}
+
+#preview {
+    max-width: 250px;
+    max-height: 300px;
+    display: none;
+    border-radius: 10px;
+    border: 1px solid #d6dce6;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+}
+
+.preview-box {
+    margin: 22px 0;
+    text-align: center;
+    padding: 20px;
+    border: 2px dashed #d6e2f0;
+    border-radius: 14px;
+    background: #f8fbff;
+}
+
+.btn {
+    width: 100%;
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.25s ease;
+}
+
+.btn:hover {
+    background: #1d4ed8;
+}
+
+@media (max-width: 780px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    .steps {
+        grid-template-columns: 1fr;
+    }
+
+    .steps div {
+        margin: 0 0 10px;
+    }
+
+    .steps div:last-child {
+        margin: 0;
+    }
+
+    .btn {
+        padding: 14px;
+        font-size: 15px;
+    }
+}
