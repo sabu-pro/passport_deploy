@@ -6,3 +6,4 @@ cloudinary
 opencv-python
 numpy
 rembg
+gunicorn
