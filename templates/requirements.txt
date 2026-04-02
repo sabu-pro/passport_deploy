@@ -1,8 +1,0 @@
-flask
-pillow
-python-dotenv
-requests
-cloudinary
-opencv-python
-numpy
-rembg
