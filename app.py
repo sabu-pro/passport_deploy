@@ -44,88 +44,71 @@ def process_single_image(input_image_bytes):
     if not input_image_bytes:
         raise ValueError("empty_image")
 
+    # 🔥 STEP 1: Resize image to reduce memory usage
+    try:
+        img = Image.open(BytesIO(input_image_bytes))
+        img.thumbnail((1200, 1200))  # reduce size
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        input_image_bytes = buffer.getvalue()
+    except Exception:
+        pass
+
+    # 🔥 STEP 2: Background removal
     try:
         removed_bytes = remove(input_image_bytes)
         img = Image.open(BytesIO(removed_bytes)).convert("RGBA")
+
         background = Image.new("RGB", img.size, (255, 255, 255))
         background.paste(img, mask=img.split()[3])
         processed_img = background
+
     except Exception:
+        # fallback if rembg fails
         processed_img = Image.open(BytesIO(input_image_bytes)).convert("RGB")
 
-    buffer = BytesIO()
-    processed_img.save(buffer, format="PNG")
-    buffer.seek(0)
+    # 🔥 STEP 3: Try Cloudinary (but don't crash if it fails)
+    try:
+        buffer = BytesIO()
+        processed_img.save(buffer, format="PNG")
+        buffer.seek(0)
 
-    upload_result = cloudinary.uploader.upload(buffer, resource_type="image", folder="passport_photos")
-    public_id = upload_result.get("public_id")
-    if not public_id:
-        raise ValueError("cloudinary_upload_failed")
+        upload_result = cloudinary.uploader.upload(
+            buffer,
+            resource_type="image",
+            folder="passport_photos"
+        )
 
-    enhanced_url = cloudinary.utils.cloudinary_url(
-        public_id,
-        transformation=[
-            {"effect": "gen_restore"},
-            {"quality": "auto"},
-            {"fetch_format": "auto"},
-        ],
-    )[0]
+        public_id = upload_result.get("public_id")
+        if not public_id:
+            return processed_img
 
-    enhanced_response = requests.get(enhanced_url, timeout=60)
-    if enhanced_response.status_code != 200:
-        raise ValueError(f"cloudinary_fetch_failed:{enhanced_response.status_code}")
+        enhanced_url = cloudinary.utils.cloudinary_url(
+            public_id,
+            transformation=[
+                {"effect": "gen_restore"},
+                {"quality": "auto"},
+                {"fetch_format": "auto"},
+            ],
+        )[0]
 
-    img = Image.open(BytesIO(enhanced_response.content))
+        enhanced_response = requests.get(enhanced_url, timeout=60)
 
-    if img.mode in ("RGBA", "LA"):
-        background = Image.new("RGB", img.size, (255, 255, 255))
-        background.paste(img, mask=img.split()[-1])
-        passport_img = background
-    else:
-        passport_img = img.convert("RGB")
+        if enhanced_response.status_code != 200:
+            return processed_img
 
-    return passport_img
+        img = Image.open(BytesIO(enhanced_response.content))
 
-    if img.mode in ("RGBA", "LA"):
-        background = Image.new("RGB", img.size, (255, 255, 255))
-        background.paste(img, mask=img.split()[-1])
-        processed_img = background
-    else:
-        processed_img = img.convert("RGB")
+        if img.mode in ("RGBA", "LA"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])
+            return background
 
-    buffer = BytesIO()
-    processed_img.save(buffer, format="PNG")
-    buffer.seek(0)
+        return img.convert("RGB")
 
-    upload_result = cloudinary.uploader.upload(buffer, resource_type="image", folder="passport_photos")
-    public_id = upload_result.get("public_id")
-    if not public_id:
-        raise ValueError("cloudinary_upload_failed")
-
-    enhanced_url = cloudinary.utils.cloudinary_url(
-        public_id,
-        transformation=[
-            {"effect": "gen_restore"},
-            {"quality": "auto"},
-            {"fetch_format": "auto"},
-        ],
-    )[0]
-
-    enhanced_response = requests.get(enhanced_url, timeout=60)
-    if enhanced_response.status_code != 200:
-        raise ValueError(f"cloudinary_fetch_failed:{enhanced_response.status_code}")
-
-    img = Image.open(BytesIO(enhanced_response.content))
-
-    if img.mode in ("RGBA", "LA"):
-        background = Image.new("RGB", img.size, (255, 255, 255))
-        background.paste(img, mask=img.split()[-1])
-        passport_img = background
-    else:
-        passport_img = img.convert("RGB")
-
-    return passport_img
-
+    except Exception:
+        # 🔥 IMPORTANT: if cloudinary fails → still return processed image
+        return processed_img
 
 def detect_face_pil(pil_img):
     img_np = np.array(pil_img)
