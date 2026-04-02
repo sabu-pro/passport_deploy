@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passport Size Photo Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="hero">
+                <h1>Passport Size Photo Generator</h1>
+                <p class="subtitle">Upload a photo, auto-crop to head-and-shoulders, and download a printable passport sheet.</p>
+            </div>
+
+            {% if missing %}
+            <div class="warn-box">
+                <strong>Missing .env settings:</strong> {{ ", ".join(missing) }}
+            </div>
+            {% endif %}
+
+            <div class="info-box">
+                <strong>Tip:</strong> Use a clear front-facing photo with a neutral background for best results.
+            </div>
+
+            <div class="steps">
+                <div><span>1</span><strong>Select image</strong></div>
+                <div><span>2</span><strong>Choose options</strong></div>
+                <div><span>3</span><strong>Generate PDF</strong></div>
+            </div>
+
+            <form action="/process" method="post" enctype="multipart/form-data" onsubmit="showSpinner()">
+                <div id="status" class="status hidden"></div>
+                <input type="hidden" name="crop_mode" id="crop_mode" value="auto">
+                <div class="form-group">
+                    <label for="image">Select image</label>
+                    <input type="file" name="image" id="image" accept="image/*" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="preset">Passport size preset</label>
+                    <select id="preset" onchange="applyPreset()">
+                        <option value="">Custom Size</option>
+                        <option value="413,531">35 x 45 mm (Standard)</option>
+                        <option value="600,600">2 x 2 inch (US Passport)</option>
+                        <option value="413,531">Australia / Many visas</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="mode">Crop mode</label>
+                    <select id="mode" onchange="applyCropMode()">
+                        <option value="auto">Auto (recommended)</option>
+                        <option value="face">Strict head & shoulder</option>
+                        <option value="center">Center portrait</option>
+                    </select>
+                </div>
+
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="width">Photo width (pixels)</label>
+                        <input type="number" name="width" id="width" value="413" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="height">Photo height (pixels)</label>
+                        <input type="number" name="height" id="height" value="531" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="border">Border (pixels)</label>
+                        <input type="number" name="border" id="border" value="2" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="spacing">Spacing (pixels)</label>
+                        <input type="number" name="spacing" id="spacing" value="10" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="copies">Number of copies</label>
+                        <input type="number" name="copies" id="copies" value="8" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bgcolor">Background color</label>
+                        <input type="color" id="bgcolor" name="bgcolor" value="#ffffff">
+                    </div>
+                </div>
+
+                <div class="form-group checkbox-row">
+                    <label>
+                        <input type="checkbox" name="add_border" checked>
+                        Add border around each photo
+                    </label>
+                </div>
+
+                <div class="preview-box">
+                    <p>Image preview</p>
+                    <img id="preview" src="" alt="Preview will appear here">
+                </div>
+
+                <button type="submit" class="btn">Generate PDF</button>
+            </form>
+        </div>
+    </div>
+
+<div class="footer-text">© 2026 Developed by Sabut B K. All rights reserved.</div>
+        <script>
+        const imageInput = document.getElementById("image");
+        const preview = document.getElementById("preview");
+
+        imageInput.addEventListener("change", function () {
+            const file = this.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = "block";
+            }
+        });
+
+        function applyPreset() {
+            const preset = document.getElementById("preset").value;
+            if (!preset) return;
+            const [w, h] = preset.split(",");
+            document.getElementById("width").value = w;
+            document.getElementById("height").value = h;
+        }
+
+        function applyCropMode() {
+            const mode = document.getElementById("mode").value;
+            document.getElementById("crop_mode").value = mode;
+            const status = document.getElementById("status");
+            status.classList.remove("hidden", "error", "success");
+            status.classList.add("success");
+            status.textContent = `Crop mode set to ${mode}.`;
+        }
+
+        function showSpinner() {
+            const status = document.getElementById("status");
+            status.classList.remove("hidden", "success");
+            status.classList.add("loading");
+            status.textContent = "Processing.. this may take 18-30 seconds depending on the image size...";
+            const btn = document.querySelector(".btn");
+            btn.disabled = true;
+            btn.textContent = "Generating PDF...";
+        }
+    </script>
+</body>
+</html>
