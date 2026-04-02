@@ -2,7 +2,6 @@ from flask import Flask, request, render_template, send_file, jsonify
 from PIL import Image, ImageOps
 from io import BytesIO
 from dotenv import load_dotenv
-from rembg import remove
 import requests
 import cloudinary
 import cloudinary.uploader
@@ -44,22 +43,20 @@ def index():
 
 
 def process_single_image(input_image_bytes):
+    from rembg import remove
+
     if not input_image_bytes:
         raise ValueError("empty_image")
 
-    # Local background removal via rembg.
-    # If it fails for any reason, fall back to original image.
     try:
         removed_bytes = remove(input_image_bytes)
         img = Image.open(BytesIO(removed_bytes)).convert("RGBA")
-        # Fill transparent background with white for consistency
         background = Image.new("RGB", img.size, (255, 255, 255))
         background.paste(img, mask=img.split()[3])
         processed_img = background
     except Exception:
         processed_img = Image.open(BytesIO(input_image_bytes)).convert("RGB")
 
-    # Keep rest of upload / enhancement steps as before.
     buffer = BytesIO()
     processed_img.save(buffer, format="PNG")
     buffer.seek(0)
