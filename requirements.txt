@@ -2,8 +2,6 @@ Flask
 gunicorn
 Pillow
 python-dotenv
-requests
-cloudinary
 opencv-python-headless
 numpy
 rembg[cpu]

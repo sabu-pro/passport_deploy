@@ -2,35 +2,18 @@ from flask import Flask, request, render_template, send_file, jsonify
 from PIL import Image, ImageOps
 from io import BytesIO
 from dotenv import load_dotenv
-import requests
-import cloudinary
-import cloudinary.uploader
-import cloudinary.utils
 import os
 import cv2
 import numpy as np
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB upload limit
 load_dotenv()
 
 
-
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-    secure=True,
-)
-
 def validate_env():
-    missing = []
-    if not os.getenv("CLOUDINARY_CLOUD_NAME"):
-        missing.append("CLOUDINARY_CLOUD_NAME")
-    if not os.getenv("CLOUDINARY_API_KEY"):
-        missing.append("CLOUDINARY_API_KEY")
-    if not os.getenv("CLOUDINARY_API_SECRET"):
-        missing.append("CLOUDINARY_API_SECRET")
-    return missing
+    return []
+
 
 @app.route("/")
 def index():
@@ -44,71 +27,30 @@ def process_single_image(input_image_bytes):
     if not input_image_bytes:
         raise ValueError("empty_image")
 
-    # 🔥 STEP 1: Resize image to reduce memory usage
-    try:
-        img = Image.open(BytesIO(input_image_bytes))
-        img.thumbnail((1200, 1200))  # reduce size
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        input_image_bytes = buffer.getvalue()
-    except Exception:
-        pass
+    # Resize large images first to reduce memory use on Render
+    original = Image.open(BytesIO(input_image_bytes)).convert("RGB")
 
-    # 🔥 STEP 2: Background removal
+    if original.width > 1000 or original.height > 1000:
+        original.thumbnail((1000, 1000))
+
+    buffer = BytesIO()
+    original.save(buffer, format="PNG")
+    buffer.seek(0)
+
     try:
-        removed_bytes = remove(input_image_bytes)
+        removed_bytes = remove(buffer.getvalue())
         img = Image.open(BytesIO(removed_bytes)).convert("RGBA")
 
         background = Image.new("RGB", img.size, (255, 255, 255))
         background.paste(img, mask=img.split()[3])
-        processed_img = background
+        final_img = background
 
     except Exception:
         # fallback if rembg fails
-        processed_img = Image.open(BytesIO(input_image_bytes)).convert("RGB")
+        final_img = original
 
-    # 🔥 STEP 3: Try Cloudinary (but don't crash if it fails)
-    try:
-        buffer = BytesIO()
-        processed_img.save(buffer, format="PNG")
-        buffer.seek(0)
+    return final_img
 
-        upload_result = cloudinary.uploader.upload(
-            buffer,
-            resource_type="image",
-            folder="passport_photos"
-        )
-
-        public_id = upload_result.get("public_id")
-        if not public_id:
-            return processed_img
-
-        enhanced_url = cloudinary.utils.cloudinary_url(
-            public_id,
-            transformation=[
-                {"effect": "gen_restore"},
-                {"quality": "auto"},
-                {"fetch_format": "auto"},
-            ],
-        )[0]
-
-        enhanced_response = requests.get(enhanced_url, timeout=60)
-
-        if enhanced_response.status_code != 200:
-            return processed_img
-
-        img = Image.open(BytesIO(enhanced_response.content))
-
-        if img.mode in ("RGBA", "LA"):
-            background = Image.new("RGB", img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[-1])
-            return background
-
-        return img.convert("RGB")
-
-    except Exception:
-        # 🔥 IMPORTANT: if cloudinary fails → still return processed image
-        return processed_img
 
 def detect_face_pil(pil_img):
     img_np = np.array(pil_img)
@@ -145,12 +87,10 @@ def detect_face_pil(pil_img):
     if len(faces) == 0:
         return None
 
-    # prefer topmost face region to avoid false positives on body/legs
-    faces = sorted(faces, key=lambda f: f[1])  # smallest y first
+    faces = sorted(faces, key=lambda f: f[1])
     top_face = faces[0]
 
-    # if top detection appears impractically low (more than 50% down image), ignore it
-    _, face_y, _, face_h = top_face
+    _, face_y, _, _ = top_face
     if face_y > img_np.shape[0] * 0.55:
         return None
 
@@ -164,16 +104,14 @@ def auto_crop_passport(pil_img, out_w, out_h, crop_mode="auto"):
 
     face = detect_face_pil(img)
 
-    # If detection is invalid (too low), force fallback top-crop to avoid mis-crop legs
     if face is not None:
-        _, fy, _, fh = face
+        _, fy, _, _ = face
         if fy > img_h * 0.5:
             face = None
 
     if face is not None and crop_mode in ("auto", "face"):
         x, y, w, h = face
 
-        # use larger head+shoulder window
         y1 = max(0, int(y - h * 0.45))
         y2 = min(img_h, int(y + h * 1.75))
 
@@ -202,14 +140,10 @@ def auto_crop_passport(pil_img, out_w, out_h, crop_mode="auto"):
         cropped = img.crop((crop_x1, y1, crop_x2, y2))
 
     else:
-        # fallback: top upper torso region (avoid leg-heavy crop)
         y2 = int(img_h * (0.58 if crop_mode == "center" else 0.62))
         y2 = min(img_h, y2)
-        crop_x1 = 0
-        crop_x2 = img_w
-        cropped = img.crop((crop_x1, 0, crop_x2, y2))
+        cropped = img.crop((0, 0, img_w, y2))
 
-    # normalize to target aspect ratio
     crop_w, crop_h = cropped.size
     current_ratio = crop_w / crop_h
 
@@ -222,11 +156,11 @@ def auto_crop_passport(pil_img, out_w, out_h, crop_mode="auto"):
         top = max(0, (crop_h - new_h) // 2)
         cropped = cropped.crop((0, top, crop_w, top + new_h))
 
-    # final white background and resize
     if cropped.mode != "RGB":
         cropped = cropped.convert("RGB")
+
     white_bg = Image.new("RGB", cropped.size, (255, 255, 255))
-    white_bg.paste(cropped, mask=None)
+    white_bg.paste(cropped)
 
     return white_bg.resize((out_w, out_h), Image.LANCZOS)
 
@@ -240,10 +174,6 @@ def hex_to_rgb(hex_color):
 
 @app.route("/process", methods=["POST"])
 def process():
-    missing = validate_env()
-    if missing:
-        return jsonify({"error": "Missing environment variables", "missing": missing}), 500
-
     try:
         passport_width = int(request.form.get("width", 413))
         passport_height = int(request.form.get("height", 531))
@@ -273,13 +203,12 @@ def process():
         img_bytes = file.read()
         img = process_single_image(img_bytes)
         img = auto_crop_passport(img, passport_width, passport_height, crop_mode=crop_mode)
+
         if add_border:
             img = ImageOps.expand(img, border=border, fill="black")
+
     except ValueError as e:
-        err_str = str(e)
-        if "429" in err_str or "quota" in err_str.lower():
-            return jsonify({"error": "quota_exceeded", "details": err_str}), 429
-        return jsonify({"error": "processing_failed", "details": err_str}), 500
+        return jsonify({"error": "processing_failed", "details": str(e)}), 500
     except Exception as e:
         return jsonify({"error": "unexpected_error", "details": str(e)}), 500
 
@@ -309,4 +238,5 @@ def process():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
