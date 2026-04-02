@@ -13,7 +13,7 @@ import numpy as np
 app = Flask(__name__)
 load_dotenv()
 
-REMOVE_BG_API_KEY = os.getenv("REMOVE_BG_API_KEY")
+
 
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
@@ -22,11 +22,8 @@ cloudinary.config(
     secure=True,
 )
 
-
 def validate_env():
     missing = []
-    if not REMOVE_BG_API_KEY:
-        missing.append("REMOVE_BG_API_KEY")
     if not os.getenv("CLOUDINARY_CLOUD_NAME"):
         missing.append("CLOUDINARY_CLOUD_NAME")
     if not os.getenv("CLOUDINARY_API_KEY"):
@@ -34,7 +31,6 @@ def validate_env():
     if not os.getenv("CLOUDINARY_API_SECRET"):
         missing.append("CLOUDINARY_API_SECRET")
     return missing
-
 
 @app.route("/")
 def index():
